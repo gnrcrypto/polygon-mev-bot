@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.19;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3FlashCallback.sol";
@@ -43,6 +43,12 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
         uint256 amount0,
         uint256 amount1,
         string reason
+    );
+
+    event BundleSubmitted(
+        bytes32 bundleHash,
+        uint256 targetBlock,
+        uint256 gasPrice
     );
 
     struct FlashCallbackData {
@@ -184,7 +190,7 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
         }
     }
 
-    // New helper function for try-catch to work correctly
+    // Helper function for try-catch to work correctly
     function executeArbitrageInternal(
         address[] memory path,
         uint256[] memory amounts,
@@ -215,10 +221,6 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
             uint256 amountIn = amounts[i];
 
             // Execute swap based on router type
-            // This is a simplified example - you'd need to implement the actual swap logic
-            // based on the router's interface (Uniswap V2, V3, Sushiswap, etc.)
-            
-            // Example for Uniswap V3 Router:
             if (router == address(swapRouter)) {
                 ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                     tokenIn: tokenIn,
@@ -234,7 +236,6 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
             } else {
                 // For other routers, you'd need to implement their specific swap logic
                 // This is just a placeholder
-                // Example: IUniswapV2Router(router).swapExactTokensForTokens(...);
             }
         }
     }
@@ -284,11 +285,10 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
         }
     }
 
-    function prepareFastLaneBundle(
-        ArbitrageOpportunity memory opportunity,
-        uint256 targetBlock
-    ) internal pure returns (FastLaneBundle memory) {
-        bytes memory callData = abi.encodeWithSelector(
+    // REFACTORED: Split into two functions to avoid stack too deep error
+    function createArbitragePayload(ArbitrageOpportunity memory opportunity) 
+        internal pure returns (bytes memory) {
+        return abi.encodeWithSelector(
             this.executeFlashLoanArbitrage.selector,
             opportunity.token0,
             opportunity.token1,
@@ -299,6 +299,14 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
             opportunity.amounts,
             opportunity.routers
         );
+    }
+
+    function prepareFastLaneBundle(
+        ArbitrageOpportunity memory opportunity,
+        uint256 targetBlock
+    ) internal pure returns (FastLaneBundle memory) {
+        // Use helper function to create payload
+        bytes memory callData = createArbitragePayload(opportunity);
         
         return FastLaneBundle({
             data: callData,
@@ -309,7 +317,7 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
     function executeArbitrageWithFastLane(
         ArbitrageOpportunity memory opportunity,
         uint256 targetBlock
-    ) external onlyOwner returns (bytes32) {
+    ) external payable onlyOwner returns (bytes32) {
         require(targetBlock > block.number, "Invalid block number");
         require(targetBlock <= block.number + maxDelayBlocks, "Block too far");
         
@@ -317,7 +325,13 @@ contract FlashLoanArbitrage is IUniswapV3FlashCallback, Ownable, IAtlasSolver {
         
         require(fastLaneSender != address(0), "FastLane sender not set");
         
-        return IFastLaneSender(fastLaneSender).sendTransaction(bundle.data, bundle.targetBlock);
+        bytes32 bundleHash = IFastLaneSender(fastLaneSender).sendTransaction{value: msg.value}(
+            bundle.data, 
+            bundle.targetBlock
+        );
+        
+        emit BundleSubmitted(bundleHash, targetBlock, tx.gasprice);
+        return bundleHash;
     }
 
     function withdrawToken(address token, uint256 amount) external onlyOwner {

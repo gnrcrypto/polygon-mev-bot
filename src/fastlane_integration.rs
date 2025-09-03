@@ -9,27 +9,17 @@ use anyhow::{Result, anyhow};
 use log::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FastLaneBundle {
+    pub data: Bytes,
+    pub target_block: U64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BundleStatus {
     Pending,
     Included,
     Failed,
     Timeout,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FastLaneBundle {
-    pub transactions: Vec<FastLaneTransaction>,
-    pub block_number: U64,
-    pub min_timestamp: Option<U256>,
-    pub max_timestamp: Option<U256>,
-    pub reverting_tx_hashes: Vec<H256>,
-    pub target_block: Option<U64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FastLaneTransaction {
-    pub tx: Transaction,
-    pub can_revert: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -49,17 +39,15 @@ impl FastLaneClient {
     }
 
     pub async fn submit_bundle(&self, bundle: FastLaneBundle) -> Result<H256> {
-        let contract = self.get_fastlane_contract().await?;
+        let contract = Contract::new(
+            self.fastlane_contract,
+            include_bytes!("../abis/FastLaneSender.json").as_ref(),
+            self.provider.clone(),
+        );
         
         let call = contract.method::<_, H256>(
-            "submitBundle",
-            (
-                bundle.transactions,
-                bundle.block_number,
-                bundle.min_timestamp,
-                bundle.max_timestamp,
-                bundle.reverting_tx_hashes,
-            ),
+            "sendTransaction",
+            (bundle.data, bundle.target_block)
         )?;
 
         let pending_tx = call.send().await?;
@@ -75,7 +63,12 @@ impl FastLaneClient {
     }
 
     pub async fn get_bundle_status(&self, bundle_hash: H256) -> Result<BundleStatus> {
-        let contract = self.get_fastlane_contract().await?;
+        let contract = Contract::new(
+            self.fastlane_contract,
+            include_bytes!("../abis/FastLaneSender.json").as_ref(),
+            self.provider.clone(),
+        );
+
         let status: u8 = contract
             .method::<_, u8>("getBundleStatus", bundle_hash)?
             .call()
@@ -89,17 +82,6 @@ impl FastLaneClient {
         })
     }
 
-    async fn get_fastlane_contract(&self) -> Result<Contract<Provider<Ws>>> {
-        let abi: &[u8] = include_bytes!("../abis/FastLane.json");
-        let abi: Abi = serde_json::from_slice(abi)?;
-        
-        Ok(Contract::new(
-            self.fastlane_contract,
-            abi,
-            self.provider.clone()
-        ))
-    }
-
     pub async fn create_arbitrage_bundle(
         &self,
         opportunity: &ArbitrageOpportunity,
@@ -107,85 +89,22 @@ impl FastLaneClient {
     ) -> Result<FastLaneBundle> {
         let current_block = self.provider.get_block_number().await?;
         
-        let flash_loan_tx = self.create_flash_loan_tx(opportunity, gas_price).await?;
-        let arbitrage_tx = self.create_arbitrage_tx(opportunity, gas_price).await?;
-        let repayment_tx = self.create_repayment_tx(opportunity, gas_price).await?;
-
-        let transactions = vec![
-            FastLaneTransaction {
-                tx: flash_loan_tx,
-                can_revert: false,
-            },
-            FastLaneTransaction {
-                tx: arbitrage_tx,
-                can_revert: true,
-            },
-            FastLaneTransaction {
-                tx: repayment_tx,
-                can_revert: false,
-            },
-        ];
-
-        Ok(FastLaneBundle {
-            transactions,
-            block_number: current_block + 1,
-            min_timestamp: None,
-            max_timestamp: Some(U256::from(block.timestamp + 120)), // 2 minute timeout
-            reverting_tx_hashes: vec![],
-            target_block: Some(current_block + 1),
-        })
-    }
-
-    async fn create_flash_loan_tx(
-        &self,
-        opportunity: &ArbitrageOpportunity,
-        gas_price: U256,
-    ) -> Result<Transaction> {
-        let contract = Contract::new(
-            opportunity.flash_loan_contract,
-            include_bytes!("../abis/FlashLoan.json").as_ref(),
-            self.provider.clone(),
-        );
-
-        let data = contract
-            .method::<_, Bytes>(
-                "executeFlashLoan",
-                (
-                    opportunity.token_in,
-                    opportunity.token_out,
-                    opportunity.amount_in,
-                    opportunity.path.clone(),
-                )
-            )?
-            .calldata()
-            .unwrap();
-
-        Ok(Transaction {
-            to: Some(opportunity.flash_loan_contract),
-            value: U256::zero(),
-            gas_price: Some(gas_price),
-            gas: U256::from(300000),
-            data,
-            nonce: None,
-            ..Default::default()
-        })
-    }
-
-    async fn create_arbitrage_tx(
-        &self,
-        opportunity: &ArbitrageOpportunity,
-        gas_price: U256,
-    ) -> Result<Transaction> {
+        // Create the calldata for our combined solver/arbitrage contract
         let contract = Contract::new(
             self.solver_contract,
-            include_bytes!("../abis/Arbitrage.json").as_ref(),
+            include_bytes!("../abis/FlashLoanArbitrage.json").as_ref(),
             self.provider.clone(),
         );
 
         let data = contract
             .method::<_, Bytes>(
-                "executeArbitrage",
+                "executeFlashLoanArbitrage",
                 (
+                    opportunity.token0,
+                    opportunity.token1,
+                    opportunity.amount0,
+                    opportunity.amount1,
+                    opportunity.fee,
                     opportunity.path.clone(),
                     opportunity.amounts.clone(),
                     opportunity.routers.clone(),
@@ -194,47 +113,68 @@ impl FastLaneClient {
             .calldata()
             .unwrap();
 
-        Ok(Transaction {
-            to: Some(self.solver_contract),
-            value: U256::zero(),
-            gas_price: Some(gas_price),
-            gas: U256::from(500000),
+        Ok(FastLaneBundle {
             data,
-            nonce: None,
-            ..Default::default()
+            target_block: current_block + 1,
         })
     }
 
-    async fn create_repayment_tx(
+    // Helper function for preparing the bundle data
+    pub async fn prepare_bundle_data(
         &self,
         opportunity: &ArbitrageOpportunity,
-        gas_price: U256,
-    ) -> Result<Transaction> {
+        target_block: U64,
+    ) -> Result<FastLaneBundle> {
         let contract = Contract::new(
-            opportunity.flash_loan_contract,
-            include_bytes!("../abis/FlashLoan.json").as_ref(),
+            self.solver_contract,
+            include_bytes!("../abis/FlashLoanArbitrage.json").as_ref(),
             self.provider.clone(),
         );
 
         let data = contract
             .method::<_, Bytes>(
-                "repayFlashLoan",
+                "executeFlashLoanArbitrage",
                 (
-                    opportunity.token_in,
-                    opportunity.amount_in,
+                    opportunity.token0,
+                    opportunity.token1,
+                    opportunity.amount0,
+                    opportunity.amount1,
+                    opportunity.fee,
+                    opportunity.path.clone(),
+                    opportunity.amounts.clone(),
+                    opportunity.routers.clone(),
                 )
             )?
             .calldata()
             .unwrap();
 
-        Ok(Transaction {
-            to: Some(opportunity.flash_loan_contract),
-            value: U256::zero(),
-            gas_price: Some(gas_price),
-            gas: U256::from(200000),
+        Ok(FastLaneBundle {
             data,
-            nonce: None,
-            ..Default::default()
+            target_block,
         })
     }
+
+    // Helper function to validate bundle parameters
+    pub fn validate_bundle_params(&self, target_block: U64, current_block: U64) -> Result<()> {
+        if target_block <= current_block {
+            return Err(anyhow!("Target block must be in the future"));
+        }
+        if target_block > current_block + 5 {
+            return Err(anyhow!("Target block too far in the future"));
+        }
+        Ok(())
+    }
+}
+
+// Add ArbitrageOpportunity struct to match our contract
+#[derive(Debug, Clone)]
+pub struct ArbitrageOpportunity {
+    pub token0: Address,
+    pub token1: Address,
+    pub amount0: U256,
+    pub amount1: U256,
+    pub fee: u32,
+    pub path: Vec<Address>,
+    pub amounts: Vec<U256>,
+    pub routers: Vec<Address>,
 }

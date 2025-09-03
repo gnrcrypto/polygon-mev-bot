@@ -36,12 +36,16 @@ dex_routers:
   quickswap: 
     address: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
     type: "v2"
+    default_fee: 3000  # Add default fee (0.3%)
   sushiswap: 
     address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
     type: "v2"
+    default_fee: 3000  # Add default fee (0.3%)
   uniswap_v3: 
     address: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
     type: "v3"
+    default_fee: 3000  # Add default fee (0.3%)
+    fee_tiers: [500, 3000, 10000]  # Available fee tiers for V3
 
 arbitrage_parameters:
   min_profit_usd: 50

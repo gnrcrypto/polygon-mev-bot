@@ -1,18 +1,57 @@
-// Cargo.toml
 [package]
-name = "polygon-flashloan-arbitrage"
-version = "0.1.0"
+name = "polygon-mev-arbitrage-bot"
+version = "0.2.0"
 edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Advanced MEV Arbitrage Bot for Polygon Network"
+license = "MIT"
+
+[workspace]
+members = [".", "contracts"]
 
 [dependencies]
+# Ethereum Libraries
 ethers = { version = "2.0", features = ["ws", "rustls"] }
-tokio = { version = "1.0", features = ["full"] }
+ethers-contract = "2.0"
+ethers-providers = "2.0"
+
+# Async Runtime
+tokio = { version = "1.28", features = ["full"] }
+futures = "0.3"
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Error Handling
 anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
 log = "0.4"
 env_logger = "0.10"
-futures = "0.3"
+
+# Utilities
 hex = "0.4"
-revm = "2.0"
+dotenv = "0.15"
+config = "0.13"
+
+# EVM Simulation
+revm = "3.4"
+
+# Performance
 bounded-vec-deque = "0.1"
+
+# MEV Specific
+flashbots = { git = "https://github.com/flashbots/flashbots-rust" }
+
+[dev-dependencies]
+mockall = "0.11"
+criterion = "0.4"
+
+[build-dependencies]
+ethers-contract-abigen = "2.0"
+
+[[bench]]
+name = "arbitrage_benchmarks"
+harness = false

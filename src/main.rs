@@ -14,17 +14,13 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use simulation_engine::{AdvancedSimulationEngine, SimulationResult};
 use fastlane_integration::FastLaneClient;
+use dotenv::dotenv;
+use std::env;
 
 // Constants for common tokens on Polygon
 const WETH: &str = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"; // WMATIC
 const USDC: &str = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
 const USDT: &str = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
-
-// Placeholder for flash loan contract and bundle addresses
-const FLASH_LOAN_CONTRACT: &str = "YOUR_FLASH_LOAN_CONTRACT_ADDRESS";
-const FASTLANE_ADDRESS: &str = "YOUR_FASTLANE_ADDRESS";
-const SOLVER_ADDRESS: &str = "YOUR_SOLVER_ADDRESS";
-
 
 #[derive(Debug, Clone)]
 struct ArbitrageOpportunity {
@@ -35,7 +31,7 @@ struct ArbitrageOpportunity {
     path: Vec<Address>,
     routers: Vec<Address>,
     pool_address: Address,
-    fee: u32, // Note: changed from u24 to u32 for simplicity and cross-compatibility
+    fee: u32,
     simulation_result: Option<SimulationResult>,
 }
 
@@ -168,16 +164,35 @@ impl MempoolMonitor {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
+    dotenv().ok();
     
-    let ws_url = "wss://polygon-mainnet.g.alchemy.com/v2/YOUR_API_KEY";
-    let provider = Provider::<Ws>::connect(ws_url).await?;
+    let ws_url = env::var("POLYGON_WS_URL")
+        .expect("POLYGON_WS_URL must be set in .env");
+    
+    let provider = Provider::<Ws>::connect(&ws_url).await?;
     let provider = Arc::new(provider);
     
-    let flash_loan_contract = Address::from_str(FLASH_LOAN_CONTRACT)?;
-    let fastlane_address = Address::from_str(FASTLANE_ADDRESS)?;
-    let solver_address = Address::from_str(SOLVER_ADDRESS)?;
+    let flash_loan_contract = Address::from_str(
+        &env::var("FLASH_LOAN_CONTRACT")
+            .expect("FLASH_LOAN_CONTRACT must be set in .env")
+    )?;
+    
+    let fastlane_address = Address::from_str(
+        &env::var("FASTLANE_RELAY_URL")
+            .expect("FASTLANE_RELAY_URL must be set in .env")
+    )?;
+    
+    let solver_address = Address::from_str(
+        &env::var("ARBITRAGE_EXECUTOR_CONTRACT")
+            .expect("ARBITRAGE_EXECUTOR_CONTRACT must be set in .env")
+    )?;
 
-    let monitor = Arc::new(MempoolMonitor::new(provider.clone(), flash_loan_contract, fastlane_address, solver_address));
+    let monitor = Arc::new(MempoolMonitor::new(
+        provider.clone(),
+        flash_loan_contract,
+        fastlane_address,
+        solver_address
+    ));
     
     // Start monitoring mempool
     let monitor_clone = monitor.clone();

@@ -1,79 +1,66 @@
 {
-  "abi": [
-    {
-      "inputs": [
+    "inputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "to",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bool",
-              "name": "canRevert",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct FastLaneTransaction[]",
-          "name": "transactions",
-          "type": "tuple[]"
+            "components": [
+                {
+                    "internalType": "address",
+                    "name": "token0",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "token1",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "amount0",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "amount1",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint24",
+                    "name": "fee",
+                    "type": "uint24"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "path",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "routers",
+                    "type": "address[]"
+                }
+            ],
+            "internalType": "struct FlashLoanArbitrage.ArbitrageOpportunity",
+            "name": "opportunity",
+            "type": "tuple"
         },
         {
-          "internalType": "uint64",
-          "name": "blockNumber",
-          "type": "uint64"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minTimestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "maxTimestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32[]",
-          "name": "revertingTxHashes",
-          "type": "bytes32[]"
+            "internalType": "uint256",
+            "name": "targetBlock",
+            "type": "uint256"
         }
-      ],
-      "name": "submitBundle",
-      "outputs": [
+    ],
+    "name": "executeArbitrageWithFastLane",
+    "outputs": [
         {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
         }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "bundleHash",
-          "type": "bytes32"
-        }
-      ],
-      "name": "getBundleStatus",
-      "outputs": [
-        {
-          "internalType": "uint8",
-          "name": "",
-          "type": "uint8"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    }
-  ]
+    ],
+    "stateMutability": "payable",
+    "type": "function"
 }

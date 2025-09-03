@@ -47,6 +47,23 @@ dex_routers:
     default_fee: 3000  # Add default fee (0.3%)
     fee_tiers: [500, 3000, 10000]  # Available fee tiers for V3
 
+fastlane:
+  contract: "0x847f82C7E749aBd4E184E3eF65d5bD47b6F49A2D"
+  relay_url: "https://relay.fastlane.tools"
+  bundle_signer: ${FASTLANE_BUNDLE_SIGNER}
+  max_delay_blocks: 2
+  min_priority_fee_gwei: 2
+  timeout_seconds: 120
+  max_bundle_size: 3
+  simulation_block_offset: 1
+
+# Bundle optimization parameters
+bundle_parameters:
+  max_gas_limit: 5000000
+  min_bribe_factor: 1.5
+  sandwich_deadline_seconds: 120
+  max_pending_bundles: 5
+
 arbitrage_parameters:
   min_profit_usd: 50
   min_profit_percentage: 0.5

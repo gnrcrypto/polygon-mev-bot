@@ -54,6 +54,9 @@ struct MempoolMonitor {
     opportunities: Mutex<Vec<ArbitrageOpportunity>>,
     processed_txs: Mutex<HashSet<H256>>,
     sim_cache: Mutex<HashMap<H256, SimulationResult>>,
+    quickswap: QuickswapRouter,
+    uniswap_v3: UniswapV3Router,
+    sushiswap: SushiswapRouter,
 }
 
 impl MempoolMonitor {

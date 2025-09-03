@@ -1,0 +1,25 @@
+# config.yaml
+network:
+  rpc_url: "https://polygon-mainnet.infura.io/v3/{apikey}"
+  ws_url: "wss://polygon-mainnet.infura.io/ws/v3/{apikey}"
+  chain_id: 137
+
+contracts:
+  flash_loan: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
+  swap_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+
+tokens:
+  weth: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+  usdc: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+  usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+
+dex_routers:
+  quickswap: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
+  sushiswap: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
+  uniswap_v3: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+
+parameters:
+  min_profit_eth: "0.001"
+  max_gas_price_gwei: 100
+  simulation_depth: 3
+  max_slippage_bps: 50

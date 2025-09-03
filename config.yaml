@@ -16,10 +16,19 @@ mev_configuration:
   fastlane_relay: "https://relay.fastlane.tools"
   max_priority_fee_per_gas: 2_000_000_000  # 2 Gwei
 
+fastlane:
+  contract: "0x847f82C7E749aBd4E184E3eF65d5bD47b6F49A2D"
+  relay_url: "https://relay.fastlane.tools"
+  max_delay_blocks: 5
+  min_priority_fee_gwei: 2
+  timeout_seconds: 120
+  max_bundle_size: 3
+  simulation_block_offset: 1
+
 contracts:
   flash_loan: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
-  swap_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
   arbitrage_executor: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
+  solver: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
 
 tokens:
   native: 

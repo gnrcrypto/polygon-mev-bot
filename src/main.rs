@@ -128,6 +128,7 @@ impl MempoolMonitor {
         Ok(vec![
             Address::from_str("0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff")?, // QuickSwap
             Address::from_str("0xE592427A0AEce92De3Edee1F18E0157C05861564")?, // Uniswap V3
+            Address::from_str("0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506")?, //SushiSwap
         ])
     }
 

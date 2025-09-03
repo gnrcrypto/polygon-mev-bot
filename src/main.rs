@@ -23,16 +23,16 @@ const USDC: &str = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
 const USDT: &str = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
 
 #[derive(Debug, Clone)]
-struct ArbitrageOpportunity {
-    token_in: Address,
-    token_out: Address,
-    amount_in: U256,
-    expected_profit: U256,
-    path: Vec<Address>,
-    routers: Vec<Address>,
-    pool_address: Address,
+pub struct ArbitrageOpportunity {
+    token0: Address,
+    token1: Address,
+    amount0: U256,
+    amount1: U256,
     fee: u32,
-    simulation_result: Option<SimulationResult>,
+    path: Vec<Address>,
+    amounts: Vec<U256>,
+    routers: Vec<Address>,
+    expected_profit: U256,
 }
 
 struct MempoolMonitor {

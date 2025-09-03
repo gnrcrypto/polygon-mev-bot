@@ -1,6 +1,17 @@
 // src/main.rs
 mod simulation_engine;
 mod fastlane_integration;
+mod routers {
+    pub mod quickswap;
+    pub mod uniswap_v3;
+    pub mod sushiswap;
+}
+
+use routers::{
+    quickswap::QuickswapRouter,
+    uniswap_v3::UniswapV3Router,
+    sushiswap::SushiswapRouter,
+};
 
 use anyhow::Result;
 use ethers::{

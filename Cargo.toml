@@ -15,6 +15,14 @@ ethers = { version = "2.0", features = ["ws", "rustls"] }
 ethers-contract = "2.0"
 ethers-providers = "2.0"
 
+[lib]
+name = "polygon_mev_bot"
+path = "src/lib.rs"
+
+[[bin]]
+name = "polygon-mev-bot"
+path = "src/main.rs"
+
 # Async Runtime
 tokio = { version = "1.28", features = ["full"] }
 futures = "0.3"

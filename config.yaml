@@ -19,7 +19,7 @@ mev_configuration:
 contracts:
   flash_loan: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
   swap_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
-  arbitrage_executor: "0x[DEPLOYED_CONTRACT_ADDRESS]"
+  arbitrage_executor: "0x69a263971db4eC7030420F2062cBB9709bd608d0"
 
 tokens:
   native: 
